@@ -14,85 +14,10 @@ import {
   Brain,
   TrendingUp,
   ChevronRight,
+  Plus,
 } from "lucide-react"
-
-const checklistItems = [
-  {
-    id: "resume",
-    category: "Documents",
-    title: "Upload your resume",
-    description: "Having an updated resume is essential for all placement drives.",
-    completed: false,
-    priority: "high",
-    icon: FileText,
-  },
-  {
-    id: "skills",
-    category: "Skills",
-    title: "Add at least 5 skills to your profile",
-    description: "More skills = better matching with opportunities.",
-    completed: true,
-    priority: "medium",
-    icon: Code2,
-  },
-  {
-    id: "dsa",
-    category: "Preparation",
-    title: "Complete 100 DSA problems",
-    description: "Data Structures & Algorithms is tested in 90% of placement rounds.",
-    completed: false,
-    priority: "high",
-    icon: Brain,
-    progress: 42,
-    total: 100,
-  },
-  {
-    id: "aptitude",
-    category: "Preparation",
-    title: "Practice aptitude tests",
-    description: "Quantitative, logical, and verbal aptitude are common Round 1 filters.",
-    completed: false,
-    priority: "medium",
-    icon: Target,
-    progress: 15,
-    total: 50,
-  },
-  {
-    id: "mock-interview",
-    category: "Practice",
-    title: "Complete 3 mock interviews",
-    description: "Mock interviews build confidence and reduce nervousness.",
-    completed: false,
-    priority: "medium",
-    icon: MessageSquare,
-    progress: 1,
-    total: 3,
-  },
-  {
-    id: "projects",
-    category: "Portfolio",
-    title: "Add 2 projects to your portfolio",
-    description: "Real projects showcase practical skills to recruiters.",
-    completed: true,
-    priority: "low",
-    icon: BookOpen,
-  },
-  {
-    id: "gd",
-    category: "Practice",
-    title: "Practice Group Discussion topics",
-    description: "GD rounds test communication and team skills.",
-    completed: false,
-    priority: "low",
-    icon: MessageSquare,
-  },
-]
-
-const weakAreas = [
-  { area: "System Design", score: 35, tip: "Study HLD/LLD patterns, practice designing scalable systems." },
-  { area: "Communication", score: 50, tip: "Join mock GDs, practice explaining your projects clearly." },
-  { area: "Aptitude", score: 60, tip: "Solve 10 problems daily on IndiaBix or Prepinsta." },
-]
+import { useUserProfile } from "@/hooks/use-user-profile"
+import { useChecklist } from "@/hooks/use-checklist"
 
 const placementRounds = [
   { round: "Online Assessment", description: "MCQs on aptitude, coding questions (2-3 problems)", tips: ["Practice on LeetCode/HackerRank", "Time management is key", "Attempt all MCQs first"] },
@@ -102,9 +27,133 @@ const placementRounds = [
 ]
 
 export default function ChecklistPage() {
+  const { profile, profileCompletion } = useUserProfile()
+  const { progress, incrementProgress } = useChecklist()
+
+  const checklistItems = [
+    {
+      id: "resume",
+      category: "Documents",
+      title: "Upload your resume",
+      description: "Having an updated resume is essential for all placement drives.",
+      completed: profile.resumeUploaded,
+      priority: "high" as const,
+      icon: FileText,
+      actionType: "profile" as const,
+    },
+    {
+      id: "skills",
+      category: "Skills",
+      title: "Add at least 5 skills to your profile",
+      description: "More skills = better matching with opportunities.",
+      completed: profile.skills.length >= 5,
+      priority: "medium" as const,
+      icon: Code2,
+      actionType: "profile" as const,
+    },
+    {
+      id: "dsa",
+      category: "Preparation",
+      title: "Complete 100 DSA problems",
+      description: "Data Structures & Algorithms is tested in 90% of placement rounds.",
+      completed: progress.dsaProgress >= 100,
+      priority: "high" as const,
+      icon: Brain,
+      progress: progress.dsaProgress,
+      total: 100,
+      progressField: "dsaProgress" as const,
+      actionType: "increment" as const,
+    },
+    {
+      id: "aptitude",
+      category: "Preparation",
+      title: "Practice aptitude tests",
+      description: "Quantitative, logical, and verbal aptitude are common Round 1 filters.",
+      completed: progress.aptitudeProgress >= 50,
+      priority: "medium" as const,
+      icon: Target,
+      progress: progress.aptitudeProgress,
+      total: 50,
+      progressField: "aptitudeProgress" as const,
+      actionType: "increment" as const,
+    },
+    {
+      id: "mock-interview",
+      category: "Practice",
+      title: "Complete 3 mock interviews",
+      description: "Mock interviews build confidence and reduce nervousness.",
+      completed: progress.mockInterviewProgress >= 3,
+      priority: "medium" as const,
+      icon: MessageSquare,
+      progress: progress.mockInterviewProgress,
+      total: 3,
+      progressField: "mockInterviewProgress" as const,
+      actionType: "increment" as const,
+    },
+    {
+      id: "projects",
+      category: "Portfolio",
+      title: "Add 2 projects to your portfolio",
+      description: "Real projects showcase practical skills to recruiters.",
+      completed: false,
+      priority: "low" as const,
+      icon: BookOpen,
+      actionType: "profile" as const,
+    },
+    {
+      id: "gd",
+      category: "Practice",
+      title: "Practice Group Discussion topics",
+      description: "GD rounds test communication and team skills.",
+      completed: false,
+      priority: "low" as const,
+      icon: MessageSquare,
+      actionType: "profile" as const,
+    },
+  ]
+
+  // Compute weak areas based on actual progress
+  const dsaPct = Math.round((progress.dsaProgress / 100) * 100)
+  const aptitudePct = Math.round((progress.aptitudeProgress / 50) * 100)
+  const mockPct = Math.round((progress.mockInterviewProgress / 3) * 100)
+
+  const weakAreas = profile.onboardingCompleted
+    ? [
+        {
+          area: "DSA Practice",
+          score: dsaPct,
+          tip: dsaPct < 50
+            ? "Solve more DSA problems daily on LeetCode or HackerRank."
+            : "Great progress! Keep solving to maintain your edge.",
+        },
+        {
+          area: "Aptitude",
+          score: aptitudePct,
+          tip: aptitudePct < 50
+            ? "Solve 10 problems daily on IndiaBix or Prepinsta."
+            : "Strong aptitude skills! Keep practicing.",
+        },
+        {
+          area: "Mock Interviews",
+          score: mockPct,
+          tip: mockPct < 100
+            ? "Schedule mock interviews with peers or mentors."
+            : "All mock interviews completed! Great job.",
+        },
+      ]
+    : [
+        { area: "DSA Practice", score: 0, tip: "Complete onboarding to get personalized recommendations." },
+        { area: "Aptitude", score: 0, tip: "Complete onboarding to get personalized recommendations." },
+        { area: "Mock Interviews", score: 0, tip: "Complete onboarding to get personalized recommendations." },
+      ]
+
   const completedCount = checklistItems.filter((i) => i.completed).length
   const totalCount = checklistItems.length
   const completionPct = Math.round((completedCount / totalCount) * 100)
+
+  const readiness = profile.onboardingCompleted
+    ? Math.round(profileCompletion * 0.4 + completionPct * 0.6)
+    : 0
 
   return (
     <div className="mx-auto max-w-5xl flex flex-col gap-6">
@@ -154,8 +203,8 @@ export default function ChecklistPage() {
               <AlertTriangle className="h-5 w-5 text-destructive" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{weakAreas.length}</p>
-              <p className="text-xs text-muted-foreground">Weak Areas Found</p>
+              <p className="text-2xl font-bold text-foreground">{weakAreas.filter((a) => a.score < 50).length}</p>
+              <p className="text-xs text-muted-foreground">Areas to Improve</p>
             </div>
           </div>
         </div>
@@ -166,7 +215,7 @@ export default function ChecklistPage() {
               <TrendingUp className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">65%</p>
+              <p className="text-2xl font-bold text-foreground">{readiness}%</p>
               <p className="text-xs text-muted-foreground">Placement Readiness</p>
             </div>
           </div>
@@ -188,14 +237,16 @@ export default function ChecklistPage() {
             <div key={area.area} className="rounded-xl bg-card p-4 border border-border">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold text-foreground">{area.area}</span>
-                <span className={`text-xs font-bold ${area.score < 50 ? "text-destructive" : "text-warning"}`}>
+                <span className={`text-xs font-bold ${area.score < 50 ? "text-destructive" : area.score < 80 ? "text-warning" : "text-success"}`}>
                   {area.score}%
                 </span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-marble/50 mb-2">
-                <div
-                  className={`h-full rounded-full ${area.score < 50 ? "bg-destructive" : "bg-warning"}`}
-                  style={{ width: `${area.score}%` }}
+                <motion.div
+                  className={`h-full rounded-full ${area.score < 50 ? "bg-destructive" : area.score < 80 ? "bg-warning" : "bg-success"}`}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${area.score}%` }}
+                  transition={{ duration: 0.6 }}
                 />
               </div>
               <p className="text-xs text-muted-foreground">{area.tip}</p>
@@ -245,14 +296,24 @@ export default function ChecklistPage() {
                 {item.progress !== undefined && item.total !== undefined && (
                   <div className="mt-2 flex items-center gap-2">
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-marble/50">
-                      <div
+                      <motion.div
                         className="h-full rounded-full bg-primary"
-                        style={{ width: `${(item.progress / item.total) * 100}%` }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(item.progress / item.total) * 100}%` }}
+                        transition={{ duration: 0.5 }}
                       />
                     </div>
                     <span className="text-xs font-medium text-muted-foreground">
                       {item.progress}/{item.total}
                     </span>
+                    {!item.completed && item.actionType === "increment" && item.progressField && (
+                      <button
+                        onClick={() => incrementProgress(item.progressField!, item.total)}
+                        className="flex h-7 items-center gap-1 rounded-lg bg-primary/10 px-2 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+                      >
+                        <Plus className="h-3 w-3" /> Log
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

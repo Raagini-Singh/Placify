@@ -3,23 +3,35 @@
 import { useState, useMemo } from "react"
 import { motion } from "framer-motion"
 import { AlertTriangle } from "lucide-react"
-import { opportunities as allOpportunities, user } from "@/lib/mock-data"
+import { opportunities as allOpportunities } from "@/lib/mock-data"
+import { useAuthUser } from "@/hooks/use-auth-user"
+import { useUserProfile } from "@/hooks/use-user-profile"
 import { StatsCards } from "@/components/dashboard/stats-cards"
 import { FilterBar } from "@/components/dashboard/filter-bar"
 import { OpportunityCard } from "@/components/dashboard/opportunity-card"
 
 export default function DashboardPage() {
+  const user = useAuthUser()
+  const { calculateMatch } = useUserProfile()
   const [selectedCohort, setSelectedCohort] = useState("All")
   const [searchQuery, setSearchQuery] = useState("")
+
+  // Add dynamic match percentages
+  const opportunitiesWithMatch = useMemo(() => {
+    return allOpportunities.map((opp) => ({
+      ...opp,
+      matchPercentage: calculateMatch(opp.requirements),
+    }))
+  }, [calculateMatch])
 
   const upcomingDeadlines = useMemo(() => {
     const now = new Date()
     const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000)
-    return allOpportunities.filter((o) => o.deadline <= in24Hours && o.deadline > now)
-  }, [])
+    return opportunitiesWithMatch.filter((o) => o.deadline <= in24Hours && o.deadline > now)
+  }, [opportunitiesWithMatch])
 
   const filteredOpportunities = useMemo(() => {
-    return allOpportunities.filter((opp) => {
+    return opportunitiesWithMatch.filter((opp) => {
       const matchesCohort =
         selectedCohort === "All" || opp.cohort === selectedCohort
       const matchesSearch =
@@ -27,7 +39,7 @@ export default function DashboardPage() {
         opp.role.toLowerCase().includes(searchQuery.toLowerCase())
       return matchesCohort && matchesSearch
     })
-  }, [selectedCohort, searchQuery])
+  }, [opportunitiesWithMatch, selectedCohort, searchQuery])
 
   return (
     <div className="mx-auto max-w-6xl flex flex-col gap-8">
@@ -74,7 +86,7 @@ export default function DashboardPage() {
       )}
 
       {/* Stats */}
-      <StatsCards opportunities={allOpportunities} />
+      <StatsCards opportunities={opportunitiesWithMatch} />
 
       {/* Filter */}
       <FilterBar

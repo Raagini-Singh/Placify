@@ -3,7 +3,7 @@
 import React from "react"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   Crown,
   LayoutDashboard,
@@ -16,9 +16,13 @@ import {
   X,
   ClipboardCheck,
   ChevronLeft,
+  Edit3,
 } from "lucide-react"
 import { useState } from "react"
-import { user } from "@/lib/mock-data"
+import { signOut } from "firebase/auth"
+import { auth } from "@/lib/firebase"
+import { useAuthUser } from "@/hooks/use-auth-user"
+import { useNotifications } from "@/hooks/use-notifications"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -30,7 +34,28 @@ const navItems = [
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const user = useAuthUser()
+  const { unreadCount } = useNotifications()
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth)
+      localStorage.removeItem("userName")
+      localStorage.removeItem("userEmail")
+      localStorage.removeItem("token")
+      localStorage.removeItem("placify_user_profile")
+      localStorage.removeItem("placify_applications")
+      localStorage.removeItem("placify_checklist")
+      localStorage.removeItem("placify_settings")
+      localStorage.removeItem("placify_read_notifications")
+      router.push("/")
+    } catch (error) {
+      console.error("Sign out error:", error)
+    }
+  }
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -105,13 +130,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </p>
             </div>
           </div>
-          <Link
-            href="/"
-            className="mt-2 flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
           >
             <LogOut className="h-4 w-4" />
             Sign Out
-          </Link>
+          </button>
         </div>
       </aside>
 
@@ -144,12 +170,60 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               <Bell className="h-4 w-4" />
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
-                3
-              </span>
+              {unreadCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </Link>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-              {user.avatar}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity"
+              >
+                {user.avatar}
+              </button>
+              {userMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setUserMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 top-12 z-50 w-56 overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
+                    <div className="border-b border-border p-4">
+                      <p className="text-sm font-semibold text-foreground">{user.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    </div>
+                    <div className="p-2">
+                      <Link
+                        href="/dashboard/profile"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                        Edit Profile
+                      </Link>
+                      <Link
+                        href="/dashboard/settings"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+                      >
+                        <Settings className="h-4 w-4" />
+                        Settings
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={handleSignOut}
+                        className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </header>

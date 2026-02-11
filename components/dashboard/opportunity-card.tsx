@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { MapPin, Banknote, ChevronDown } from "lucide-react"
 import type { Opportunity, ApplicationStatus } from "@/lib/mock-data"
 import { DeadlineBadge } from "./deadline-badge"
 import { MatchIndicator } from "./match-indicator"
+import { useApplications } from "@/hooks/use-applications"
 
 interface OpportunityCardProps {
   opportunity: Opportunity
@@ -46,10 +47,21 @@ const allStatuses: ApplicationStatus[] = [
 ]
 
 export function OpportunityCard({ opportunity, index }: OpportunityCardProps) {
-  const [status, setStatus] = useState(opportunity.status)
+  const { getApplicationStatus, updateApplicationStatus } = useApplications()
+  const [status, setStatus] = useState<ApplicationStatus | null>(null)
   const [showStatusMenu, setShowStatusMenu] = useState(false)
 
-  const currentStatus = statusConfig[status]
+  useEffect(() => {
+    setStatus(getApplicationStatus(opportunity.id))
+  }, [opportunity.id, getApplicationStatus])
+
+  const handleStatusChange = (newStatus: ApplicationStatus) => {
+    setStatus(newStatus)
+    updateApplicationStatus(opportunity.id, newStatus)
+    setShowStatusMenu(false)
+  }
+
+  const currentStatus = status ? statusConfig[status] : null
 
   return (
     <motion.div
@@ -117,37 +129,46 @@ export function OpportunityCard({ opportunity, index }: OpportunityCardProps) {
 
       {/* Status dropdown */}
       <div className="relative mt-auto">
-        <button
-          type="button"
-          onClick={() => setShowStatusMenu(!showStatusMenu)}
-          className={`flex w-full items-center justify-between rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${currentStatus.bg} ${currentStatus.color}`}
-        >
-          {currentStatus.label}
-          <ChevronDown
-            className={`h-4 w-4 transition-transform ${showStatusMenu ? "rotate-180" : ""}`}
-          />
-        </button>
+        {currentStatus ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setShowStatusMenu(!showStatusMenu)}
+              className={`flex w-full items-center justify-between rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${currentStatus.bg} ${currentStatus.color}`}
+            >
+              {currentStatus.label}
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${showStatusMenu ? "rotate-180" : ""}`}
+              />
+            </button>
 
-        {showStatusMenu && (
-          <div className="absolute bottom-full left-0 z-20 mb-1 w-full overflow-hidden rounded-xl border border-border bg-card shadow-lg">
-            {allStatuses.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => {
-                  setStatus(s)
-                  setShowStatusMenu(false)
-                }}
-                className={`flex w-full items-center px-4 py-2.5 text-left text-sm transition-colors hover:bg-secondary ${
-                  status === s
-                    ? statusConfig[s].color
-                    : "text-muted-foreground"
-                }`}
-              >
-                {statusConfig[s].label}
-              </button>
-            ))}
-          </div>
+            {showStatusMenu && (
+              <div className="absolute bottom-full left-0 z-20 mb-1 w-full overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+                {allStatuses.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => handleStatusChange(s)}
+                    className={`flex w-full items-center px-4 py-2.5 text-left text-sm transition-colors hover:bg-secondary ${
+                      status === s
+                        ? statusConfig[s].color
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {statusConfig[s].label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => handleStatusChange("applied")}
+            className="flex w-full items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Mark as Applied
+          </button>
         )}
       </div>
     </motion.div>

@@ -2,20 +2,32 @@
 
 import { useState, useMemo } from "react"
 import { motion } from "framer-motion"
-import { Search, MapPin, Banknote, Send, Filter, Building2, Briefcase } from "lucide-react"
-import { opportunities as allOpportunities, roles, companyTypes, industries, user } from "@/lib/mock-data"
+import { Search, MapPin, Banknote, Send, Filter, Building2, Briefcase, CheckCircle } from "lucide-react"
+import { opportunities as allOpportunities, roles, companyTypes, industries } from "@/lib/mock-data"
 import { MatchIndicator } from "@/components/dashboard/match-indicator"
 import { DeadlineBadge } from "@/components/dashboard/deadline-badge"
+import { useUserProfile } from "@/hooks/use-user-profile"
+import { useApplications } from "@/hooks/use-applications"
 
 export default function OpportunitiesPage() {
+  const { calculateMatch } = useUserProfile()
+  const { getApplicationStatus, updateApplicationStatus } = useApplications()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedRole, setSelectedRole] = useState("All")
   const [selectedType, setSelectedType] = useState("All")
   const [selectedIndustry, setSelectedIndustry] = useState("All")
   const [showFilters, setShowFilters] = useState(false)
 
+  // Add dynamic match percentages to opportunities
+  const opportunitiesWithMatch = useMemo(() => {
+    return allOpportunities.map((opp) => ({
+      ...opp,
+      matchPercentage: calculateMatch(opp.requirements),
+    }))
+  }, [calculateMatch])
+
   const filteredOpportunities = useMemo(() => {
-    return allOpportunities
+    return opportunitiesWithMatch
       .filter((opp) => {
         const matchesSearch =
           opp.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -26,7 +38,7 @@ export default function OpportunitiesPage() {
         return matchesSearch && matchesRole && matchesType && matchesIndustry
       })
       .sort((a, b) => b.matchPercentage - a.matchPercentage)
-  }, [searchQuery, selectedRole, selectedType, selectedIndustry])
+  }, [opportunitiesWithMatch, searchQuery, selectedRole, selectedType, selectedIndustry])
 
   return (
     <div className="mx-auto max-w-6xl flex flex-col gap-6">
@@ -188,13 +200,20 @@ export default function OpportunitiesPage() {
                 <p className="mb-1 text-xs text-muted-foreground">Profile Match</p>
                 <MatchIndicator percentage={opp.matchPercentage} />
               </div>
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-all glow-velvet"
-              >
-                <Send className="h-3.5 w-3.5" /> Apply Now
-              </motion.button>
+              {getApplicationStatus(opp.id) ? (
+                <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-success/10 border border-success/20 px-4 py-2.5 text-sm font-semibold text-success">
+                  <CheckCircle className="h-3.5 w-3.5" /> Applied
+                </div>
+              ) : (
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => updateApplicationStatus(opp.id, "applied")}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-all glow-velvet"
+                >
+                  <Send className="h-3.5 w-3.5" /> Apply Now
+                </motion.button>
+              )}
             </div>
           </motion.div>
         ))}

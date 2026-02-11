@@ -7,6 +7,9 @@ import { Crown, ArrowRight, ArrowLeft, Check, Trophy, Star, Sparkles, Target } f
 import { StepPersonal } from "./step-personal"
 import { StepAcademic } from "./step-academic"
 import { StepSkillsResume } from "./step-skills-resume"
+import { useUserProfile } from "@/hooks/use-user-profile"
+import { auth } from "@/lib/firebase"
+import { saveUserData } from "@/lib/firestore"
 
 const steps = [
   { id: 1, label: "Personal", icon: "👤", achievement: "Identity Unlocked!" },
@@ -29,6 +32,7 @@ export interface ProfileData {
 
 export function OnboardingWizard() {
   const router = useRouter()
+  const { updateProfile: saveProfile } = useUserProfile()
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showAchievement, setShowAchievement] = useState(false)
@@ -87,6 +91,30 @@ export function OnboardingWizard() {
     setLastAchievement("🎉 Profile Master! You're all set!")
     setShowAchievement(true)
     setIsSubmitting(true)
+
+    const profilePayload = {
+      firstName: profileData.firstName,
+      lastName: profileData.lastName,
+      phone: profileData.phone,
+      collegeName: profileData.collegeName,
+      degree: profileData.degree,
+      cgpa: profileData.cgpa,
+      specialization: profileData.specialization,
+      skills: profileData.skills,
+      resumeUploaded: !!profileData.resumeFile,
+      resumeFileName: profileData.resumeFile?.name || "",
+      onboardingCompleted: true,
+    }
+
+    // Save to localStorage via hook
+    saveProfile(profilePayload)
+
+    // Also save to Firestore if user is authenticated
+    const uid = auth.currentUser?.uid
+    if (uid) {
+      saveUserData(uid, profilePayload)
+    }
+
     setTimeout(() => {
       router.push("/dashboard")
     }, 2000)

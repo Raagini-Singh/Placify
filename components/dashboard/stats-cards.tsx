@@ -3,16 +3,20 @@
 import { motion } from "framer-motion"
 import { Briefcase, Clock, CheckCircle, XCircle } from "lucide-react"
 import type { Opportunity } from "@/lib/mock-data"
+import { useApplications } from "@/hooks/use-applications"
 
 interface StatsCardsProps {
   opportunities: Opportunity[]
 }
 
 export function StatsCards({ opportunities }: StatsCardsProps) {
-  const applied = opportunities.filter((o) => o.status === "applied").length
-  const interviews = opportunities.filter((o) => o.status === "interview").length
-  const selected = opportunities.filter((o) => o.status === "selected").length
-  const rejected = opportunities.filter((o) => o.status === "rejected").length
+  const { applications } = useApplications()
+
+  // Count actual applications from localStorage, not hardcoded statuses
+  const applied = Object.values(applications).filter((a) => a.status === "applied").length
+  const interviews = Object.values(applications).filter((a) => a.status === "interview").length
+  const selected = Object.values(applications).filter((a) => a.status === "selected").length
+  const rejected = Object.values(applications).filter((a) => a.status === "rejected").length
 
   const stats = [
     {
